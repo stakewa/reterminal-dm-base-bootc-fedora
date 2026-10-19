@@ -1,0 +1,123 @@
+name: Build unstable and test image
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'image/**'
+    branches:
+      - master
+  schedule:
+    - cron: '0 0 * * 4' # 00:00 at Thursday
+
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
+  issues: write
+
+jobs:
+  build:
+    timeout-minutes: 30
+    name: Build unstable and test image
+    runs-on: ubuntu-26.04-arm # For ARM64 architecture
+    env:
+      BASE_IMAGE_NAME: reterminal-dm-base-bootc-fedora
+      TEST_IMAGE_NAME: reterminal-dm-base-bootc-fedora-testing
+      REGISTRY: ghcr.io/stakewa
+
+    steps:
+      # Based on https://github.com/orgs/community/discussions/25678
+      - name: Delete huge unnecessary tools folder
+        run:
+          rm -rf /opt/hostedtoolcache
+
+      - name: Clone the repository
+        uses: actions/checkout@v7
+
+      - name: Log in to the GitHub Container registry
+        uses: redhat-actions/podman-login@v2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build base image
+        id: build-base-image
+        uses: redhat-actions/buildah-build@v3.1.0
+        with:
+          buildah-image: quay.io/buildah/stable
+          image: ${{ env.BASE_IMAGE_NAME }}
+          tags: unstable
+          context: ./image
+          containerfiles: ./image/Containerfile
+
+      - name: Build test image from local base image
+        id: build-test-image
+        uses: redhat-actions/buildah-build@v3.1.0
+        with:
+          buildah-image: quay.io/buildah/stable
+          image: ${{ env.TEST_IMAGE_NAME }}
+          tags: latest
+          context: ./testing/image
+          containerfiles: ./testing/image/Containerfile
+          build-args: |
+            LOCAL_BASE_IMAGE=localhost/${{ env.BASE_IMAGE_NAME }}@${{ steps.build-base-image.outputs.digest }}
+
+      - name: Push base image to GitHub Container Repository
+        id: push-base-image-to-ghcr
+        uses: redhat-actions/push-to-registry@v3.0.0
+        with:
+          image: ${{ steps.build-base-image.outputs.image }}
+          tags: ${{ steps.build-base-image.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
+
+      - name: Push test image to GitHub Container Repository
+        id: push-test-image-to-ghcr
+        uses: redhat-actions/push-to-registry@v3.0.0
+        with:
+          image: ${{ steps.build-test-image.outputs.image }}
+          tags: ${{ steps.build-test-image.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
+
+      - name: Create issue for approval
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_IMAGE: ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}
+          BASE_IMAGE_DIGEST: ${{ steps.push-base-image-to-ghcr.outputs.digest }}
+          TEST_IMAGE: ${{ env.REGISTRY }}/${{ env.TEST_IMAGE_NAME }}
+          TEST_IMAGE_DIGEST: ${{ steps.push-test-image-to-ghcr.outputs.digest }}
+          SHA: ${{ github.sha }}
+        run: |
+          gh issue create \
+            --title "New image \`${BASE_IMAGE}\` requires testing and approval" \
+            --label "unstable-image-release" \
+            --body "A new image has been built and requires testing and approval.
+
+          The test image was also built from this new base image. Install it on a test device with:
+          \`\`\`bash
+          bootc install reset --experimental --target-imgref ${TEST_IMAGE}@${TEST_IMAGE_DIGEST}
+          \`\`\` 
+          [Install reset reference](https://bootc.dev/bootc/bootc-experimental-install-reset.7.html)
+          
+          This might involve [cleaning up the old stateroot](https://bootc.dev/bootc/bootc-experimental-install-reset.7.html#cleaning-up-the-old-stateroot)
+
+
+          Base image: \`${BASE_IMAGE}\`
+          Base image digest: \`${BASE_IMAGE_DIGEST}\`
+          Base image full reference: 
+          \`\`\`bash
+          ${BASE_IMAGE}@${BASE_IMAGE_DIGEST}
+          \`\`\`
+          
+          Test image: \`${TEST_IMAGE}\`
+          Test image digest: \`${TEST_IMAGE_DIGEST}\`
+          Test image full reference: 
+          \`\`\`bash
+          ${TEST_IMAGE}@${TEST_IMAGE_DIGEST}
+          \`\`\`
+          
+          Commit SHA: \`${SHA}\`
+          
+          To approve this image and give it the \`latest\` tag, comment \`/approve\` under this issue.
+          "

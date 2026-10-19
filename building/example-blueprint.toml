@@ -1,0 +1,21 @@
+# Optional, blueprint file
+[[customizations.disk.partitions]]
+type = "plain"
+label = "ESP"
+mountpoint = "/boot/efi"
+fs_type = "vfat"
+minsize = "512 MiB"
+
+[[customizations.disk.partitions]]
+type = "plain"
+label = "boot"
+mountpoint = "/boot"
+fs_type = "ext4"
+minsize = "2 GiB"
+
+[[customizations.disk.partitions]]
+type = "plain"
+label = "root"
+mountpoint = "/"
+fs_type = "ext4"
+minsize = "1 GiB" # Minimum size, Needs to be resized after writing

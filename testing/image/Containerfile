@@ -1,0 +1,30 @@
+#
+# Copyright (C) 2026 Daaf Wassenaar <contact@daaf.dev>
+# License: MIT
+#
+# Example: localhost/reterminal-dm-base-bootc-fedora:build-1234
+ARG LOCAL_BASE_IMAGE
+FROM ${LOCAL_BASE_IMAGE}
+
+# Automatic login as root
+RUN mkdir -p /etc/systemd/system/getty@tty1.service.d && \
+    printf '%s\n' \
+      '[Service]' \
+      'ExecStart=' \
+      'ExecStart=-/sbin/agetty --autologin root --noclear - $TERM' \
+      > /etc/systemd/system/getty@tty1.service.d/autologin.conf
+
+# Create a password for root, to allow ssh login on test image
+RUN echo 'root:test-image' | chpasswd
+
+RUN dnf install libinput-utils -y
+
+# Clean up
+RUN dnf clean all
+RUN rm -rf /var/{log,cache,lib}/* /run/dnf
+
+COPY /scripts /scripts
+
+RUN printf '%s\n' 'To run the interactive testing script, execute: /bash/bin /scripts/interactive-testing.sh' > /etc/motd
+
+RUN bootc container lint

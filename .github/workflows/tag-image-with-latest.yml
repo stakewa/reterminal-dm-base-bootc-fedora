@@ -1,0 +1,97 @@
+name: Tag base image with latest
+on:
+  issue_comment:
+    types: [ created ]
+
+permissions:
+  packages: write
+  issues: write
+
+jobs:
+  tag:
+    timeout-minutes: 5
+    if: >-
+      !github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/approve') &&
+      contains(github.event.issue.labels.*.name, 'unstable-image-release')
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: ghcr.io/stakewa
+
+    steps:
+      - name: Verify commenter is a repository admin
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENTER: ${{ github.event.comment.user.login }}
+        run: |
+          set -euo pipefail
+
+          permission=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/collaborators/${COMMENTER}/permission" \
+            --jq '.permission')
+
+          if [[ "$permission" != "admin" ]]; then
+            echo "Commenter does not have admin permission (permission: $permission)."
+            exit 1
+          fi
+
+      - name: Get base image reference from issue body
+        id: image-reference
+        env:
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+
+          image=$(printf '%s\n' "$BODY" | sed -n 's/^Base image: `\(.*\)`$/\1/p')
+          digest=$(printf '%s\n' "$BODY" | sed -n 's/^Base image digest: `\(.*\)`$/\1/p')
+
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to the GitHub Container registry
+        uses: redhat-actions/podman-login@v2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag the approved image with latest
+        env:
+          IMAGE: ${{ steps.image-reference.outputs.image }}
+          DIGEST: ${{ steps.image-reference.outputs.digest }}
+        run: |
+          set -euo pipefail
+
+          podman pull "${IMAGE}@${DIGEST}"
+          podman tag "${IMAGE}@${DIGEST}" "${IMAGE}:latest"
+          podman push "${IMAGE}:latest"
+
+      - name: Close older unstable-image-release issues and the current issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          CURRENT_ISSUE: ${{ github.event.issue.number }}
+          IMAGE: ${{ steps.image-reference.outputs.image }}
+          DIGEST: ${{ steps.image-reference.outputs.digest }}
+        run: |
+          set -euo pipefail
+
+          # Close the issue that triggered this action first.
+          gh issue close "$CURRENT_ISSUE" \
+            --comment "Image \`${IMAGE}@${DIGEST}\` tagged with latest."
+
+          # Close any older unstable-image-release issues.
+          gh issue list \
+            --state open \
+            --label unstable-image-release \
+            --limit 1000 \
+            --json number \
+            --jq '.[].number' |
+          while read -r number; do
+            if (( number < CURRENT_ISSUE )); then
+              gh issue close "$number" \
+                --comment "Superseded by #${CURRENT_ISSUE}."
+            fi
+          done

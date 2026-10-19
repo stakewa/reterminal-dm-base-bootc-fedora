@@ -1,0 +1,18 @@
+# Rebind the GPU display driver to help wake the DSI screen.
+# On some reTerminal devices, the screen may not turn back on after a soft reboot.
+#
+# In the following projects, you can find related approaches:
+# https://github.com/chromasurf/reterminal_dm_cm4
+# https://github.com/ANUcybernetics/reterminal_dm/tree/main
+[Unit]
+Description=DSI Display GPU Re-bind Service
+After=local-fs.target
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/reTerminal-DM/setup-dsi-display.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
