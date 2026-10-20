@@ -149,4 +149,4 @@ unable to boot.
 ## Notes
 
 - Avoid upgrading the kernel in your image, as this might/will break the drivers. Running dnf upgrade without excluding
-  the kernel package (s) will have this effect.
+  the kernel package (s) will have this effect. To avoid accidental kernel updates, excludepkgs=kernel* is added to the dnf configuration inside this image at `/etc/dnf/libdnf5.conf.d/99-kernel-exclude.conf`.
