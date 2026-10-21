@@ -6,7 +6,7 @@
 # https://github.com/ANUcybernetics/reterminal_dm/tree/main
 [Unit]
 Description=DSI Display GPU Re-bind Service
-After=local-fs.target
+After=local-fs.target systemd-udevd.service
 Before=display-manager.service
 
 [Service]

@@ -7,9 +7,6 @@
 
 set -e
 
-# Start udevd in daemon mode
-udevd -d
-
 # Trigger udev subsystems and devices
 udevadm trigger --type=subsystems --action=add
 udevadm trigger --type=devices --action=add
