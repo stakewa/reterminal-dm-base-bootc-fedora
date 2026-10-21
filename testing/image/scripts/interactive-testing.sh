@@ -4,6 +4,9 @@
 # License: MIT
 #
 
+# Enter correct working directory for resolving relative paths
+cd "$(dirname "$0")"
+
 cleanup() {
   tput cnorm 2>/dev/null || true  # Show cursor
   tput rmcup 2>/dev/null || true  # Restore previous screen
