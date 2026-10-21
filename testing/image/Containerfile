@@ -17,6 +17,13 @@ RUN mkdir -p /etc/systemd/system/getty@tty1.service.d && \
 # Create a password for root, to allow ssh login on test image
 RUN echo 'root:test-image' | chpasswd
 
+# Allow root password login for ssh
+RUN mkdir -p /etc/ssh/sshd_config.d && \
+    printf '%s\n' \
+      'PasswordAuthentication yes' \
+      'PermitRootLogin yes' \
+      > /etc/ssh/sshd_config.d/99-test-login.conf
+
 RUN dnf install libinput-utils -y
 
 # Clean up

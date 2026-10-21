@@ -138,8 +138,14 @@ WORKDIR /
 #-------------------------------------------
 # Systemd services
 #-------------------------------------------
-# Copy the filetree folder to container root
-COPY /filetree /
+# Copy the filetree folder to temp folder
+COPY filetree/ /tmp/filetree/
+# Fix permissions before placing at root
+RUN chown -R root:root /tmp/filetree \
+ && find /tmp/filetree -type d -exec chmod 0755 {} + \
+ && find /tmp/filetree -type f -exec chmod 0644 {} + \
+ && find /tmp/filetree -type f -name '*.sh' -exec chmod 0755 {} + \
+ && cp -a --no-preserve=ownership /tmp/filetree/. /
 
 # Fixes screen not always booting up correctly after soft-reboot.
 RUN systemctl enable reterminal-dm-rebind-dsi.service
