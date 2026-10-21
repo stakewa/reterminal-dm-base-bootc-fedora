@@ -29,7 +29,7 @@ else
         exit 1
     fi
 
-    echo '%s' gpu > "$driver/unbind"
+    echo gpu > "$driver/unbind"
     sleep 1
     echo gpu > "$driver/bind"
     udevadm settle --timeout=30
