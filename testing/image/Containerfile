@@ -32,6 +32,6 @@ RUN rm -rf /var/{log,cache,lib}/* /run/dnf
 
 COPY /scripts /scripts
 
-RUN printf '%s\n' 'To run the interactive testing script, execute: /bash/bin /scripts/interactive-testing.sh' > /etc/motd
+RUN printf '%s\n' 'To run the interactive testing script, execute: /bin/bash /scripts/interactive-testing.sh' > /etc/motd
 
 RUN bootc container lint
