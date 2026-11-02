@@ -143,7 +143,7 @@ sudo podman run \
     -v /var/lib/containers/storage:/var/lib/containers/storage \
     ghcr.io/osbuild/image-builder-cli:latest \
     build \
-    ${BLUEPRINT_PATH:+--blueprint ./blueprint.toml} \
+    ${BLUEPRINT_PATH:+--blueprint /blueprint.toml} \
     --output-dir "/output" \
     --output-name "$DISK_IMAGE_NAME" \
     --with-manifest \
