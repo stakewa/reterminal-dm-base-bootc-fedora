@@ -150,6 +150,9 @@ RUN chown -R root:root /tmp/filetree \
 # Fixes screen not always booting up correctly after soft-reboot.
 RUN systemctl enable reterminal-dm-rebind-dsi.service
 
+# https://discussion.fedoraproject.org/t/modernizing-the-console-with-kmscon/205410 - TODO kmscon is rotated incorrectly at the moment, uses fbcon again. Requires proper fix later
+RUN systemctl disable kmscon.service
+
 #-------------------------------------------
 # Cleanup
 #-------------------------------------------
