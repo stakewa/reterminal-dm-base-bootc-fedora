@@ -151,7 +151,11 @@ RUN chown -R root:root /tmp/filetree \
 RUN systemctl enable reterminal-dm-rebind-dsi.service
 
 # https://discussion.fedoraproject.org/t/modernizing-the-console-with-kmscon/205410 - TODO kmscon is rotated incorrectly at the moment, uses fbcon again. Requires proper fix later
-RUN systemctl disable kmscon.service
+RUN systemctl mask kmsconvt@.service
+# Set getty again for autovt
+RUN ln -sf /usr/lib/systemd/system/getty@.service /etc/systemd/system/autovt@.service
+# Enable default tty1
+RUN systemctl enable getty@tty1.service
 
 #-------------------------------------------
 # Cleanup
