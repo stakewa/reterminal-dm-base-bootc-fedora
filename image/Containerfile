@@ -27,29 +27,31 @@ echo "Using updated kernel: $(cat /tmp/kernel-version)"
 EORUN
 
 #-------------------------------------------
-# Display Driver ili9881d (patched for newer kernels)
+# Display driver ili9881d (patched for newer kernels) and gpiomem driver for userspace access to GPIO
 #-------------------------------------------
-COPY /drivers/ili9881d /tmp/build/drivers/ili9881d
+COPY /drivers /tmp/build/drivers
 
-WORKDIR /tmp/build/drivers/ili9881d
+WORKDIR /tmp/build/drivers
 
 RUN <<EORUN
 set -euo pipefail
 
-# Build the patched kernel module.
+# Build both kernel modules.
 make all KERNEL_VERSION="$(cat /tmp/kernel-version)"
 
-# Test if it build correctly
-test -f ili9881d.ko
+# Test that both modules built correctly.
+test -f ili9881d/ili9881d.ko
+test -f raspberrypi/gpiomem/raspberrypi-gpiomem.ko
 
-# Install driver
+# Install both drivers.
 make install KERNEL_VERSION="$(cat /tmp/kernel-version)"
 
 # Run depmod
 depmod -a "$(cat /tmp/kernel-version)"
 
-# Check if succesfully installed
+# Check that both drivers were successfully installed.
 modinfo -k "$(cat /tmp/kernel-version)" ili9881d
+modinfo -k "$(cat /tmp/kernel-version)" raspberrypi-gpiomem
 EORUN
 
 WORKDIR /
@@ -192,5 +194,4 @@ RUN kernel_version="$(basename "$(readlink -f /lib/modules/*/build)")" \
 
 # Lint container image
 RUN bootc container lint
-
 

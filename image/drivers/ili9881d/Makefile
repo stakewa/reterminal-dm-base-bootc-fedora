@@ -12,10 +12,10 @@ KERNEL_BUILD_DIR := /usr/lib/modules/$(KERNEL_VERSION)/build
 obj-m += ili9881d.o
 
 all:
-	$(MAKE) -C $(KERNEL_BUILD_DIR) M=$(PWD) modules
+	$(MAKE) -C $(KERNEL_BUILD_DIR) M=$(CURDIR) modules
 
 install:
-	$(MAKE) -C $(KERNEL_BUILD_DIR) M=$(PWD) modules_install
+	$(MAKE) -C $(KERNEL_BUILD_DIR) M=$(CURDIR) modules_install
 
 clean:
-	$(MAKE) -C $(KERNEL_BUILD_DIR) M=$(PWD) clean
+	$(MAKE) -C $(KERNEL_BUILD_DIR) M=$(CURDIR) clean
